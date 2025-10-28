@@ -1,38 +1,15 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
-
-interface WgInterface {
-  private_key: string;
-  address: string;
-  listen_port: number;
-  dns?: string;
-  post_up?: string;
-  post_down?: string;
-}
-
-interface Peer {
-  public_key: string;
-  allowed_ips: string;
-  persistent_keepalive?: number;
-  endpoint?: string;
-  name?: string;
-}
-
-interface WgConfig {
-  name: string;
-  path: string;
-  interface: WgInterface;
-  peers: Peer[];
-}
-
-interface PeerStatus {
-  public_key: string;
-  endpoint?: string;
-  latest_handshake?: string;
-  transfer_rx?: string;
-  transfer_tx?: string;
-}
+import { WgConfig, Peer, PeerStatus, Theme } from "./types";
+import { isPeerActive, getPeerStatus } from "./utils/helpers";
+import { Sidebar } from "./components/Sidebar/Sidebar";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { ErrorBanner } from "./components/ErrorBanner";
+import { EmptyState } from "./components/EmptyState";
+import { PeerDetails } from "./components/PeerDetails/PeerDetails";
+import "./styles/globals.css";
+import "./styles/layout.css";
+import "./styles/modal.css";
 
 function App() {
   const [configs, setConfigs] = useState<string[]>([]);
@@ -45,7 +22,7 @@ function App() {
   const [editingPeer, setEditingPeer] = useState<Peer | null>(null);
   const [showAddPeer, setShowAddPeer] = useState<boolean>(false);
   const [selectedPeer, setSelectedPeer] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
+  const [theme, setTheme] = useState<Theme>('system');
 
   // Load configs on mount
   useEffect(() => {
@@ -101,29 +78,24 @@ function App() {
 
   async function loadConfig(name: string) {
     try {
-      setLoading(true);
-      const cfg = await invoke<WgConfig>("load_wireguard_config", { name });
-      setConfig(cfg);
+      const loadedConfig = await invoke<WgConfig>("load_wireguard_config", { name });
+      setConfig(loadedConfig);
 
-      // Check if interface is up
-      const up = await invoke<boolean>("check_interface_status", { configName: name });
-      setIsUp(up);
+      const status = await invoke<boolean>("check_interface_status", { configName: name });
+      setIsUp(status);
 
-      if (up) {
+      if (status) {
         await loadStatus();
       }
 
       setError("");
     } catch (e) {
       setError(`Failed to load config: ${e}`);
-    } finally {
-      setLoading(false);
     }
   }
 
   async function loadStatus() {
     if (!activeConfig) return;
-
     try {
       const statuses = await invoke<PeerStatus[]>("get_wireguard_status", {
         configName: activeConfig
@@ -136,136 +108,84 @@ function App() {
 
   async function handleRestart() {
     if (!activeConfig) return;
-
     try {
-      setLoading(true);
-      await invoke("restart_wireguard", { configName: activeConfig });
+      await invoke("restart_interface", { name: activeConfig });
       setIsUp(true);
-      await loadStatus();
       setError("");
+      await loadStatus();
     } catch (e) {
-      setError(`Failed to restart: ${e}`);
-    } finally {
-      setLoading(false);
+      setError(`Failed to start interface: ${e}`);
     }
   }
 
   async function handleBringDown() {
     if (!activeConfig) return;
-
     try {
-      setLoading(true);
-      await invoke("bring_interface_down", { configName: activeConfig });
+      await invoke("bring_down_interface", { name: activeConfig });
       setIsUp(false);
       setPeerStatuses([]);
       setError("");
     } catch (e) {
-      setError(`Failed to bring down: ${e}`);
-    } finally {
-      setLoading(false);
+      setError(`Failed to stop interface: ${e}`);
     }
   }
 
   async function handleDeletePeer(publicKey: string) {
-    if (!activeConfig || !confirm("Are you sure you want to delete this peer?")) return;
+    if (!config) return;
+    if (!confirm("Are you sure you want to delete this peer?")) return;
 
     try {
-      setLoading(true);
-      const updated = await invoke<WgConfig>("delete_peer", {
-        configName: activeConfig,
-        publicKey
+      const updatedPeers = config.peers.filter(p => p.public_key !== publicKey);
+      await invoke("save_wireguard_config", {
+        name: activeConfig,
+        config: { ...config, peers: updatedPeers }
       });
-      setConfig(updated);
+
+      setConfig({ ...config, peers: updatedPeers });
+      if (selectedPeer === publicKey) {
+        setSelectedPeer(null);
+      }
       setError("");
     } catch (e) {
       setError(`Failed to delete peer: ${e}`);
-    } finally {
-      setLoading(false);
     }
   }
 
   async function handleSavePeer(peer: Peer) {
-    if (!activeConfig) return;
+    if (!config) return;
 
     try {
-      setLoading(true);
-
+      let updatedPeers: Peer[];
       if (editingPeer) {
-        // Update existing peer
-        const updated = await invoke<WgConfig>("update_peer", {
-          configName: activeConfig,
-          publicKey: editingPeer.public_key,
-          updatedPeer: peer
-        });
-        setConfig(updated);
+        updatedPeers = config.peers.map(p =>
+          p.public_key === editingPeer.public_key ? peer : p
+        );
       } else {
-        // Add new peer
-        const updated = await invoke<WgConfig>("add_peer", {
-          configName: activeConfig,
-          peer
-        });
-        setConfig(updated);
+        updatedPeers = [...config.peers, peer];
       }
 
-      setEditingPeer(null);
+      await invoke("save_wireguard_config", {
+        name: activeConfig,
+        config: { ...config, peers: updatedPeers }
+      });
+
+      setConfig({ ...config, peers: updatedPeers });
       setShowAddPeer(false);
+      setEditingPeer(null);
       setError("");
     } catch (e) {
       setError(`Failed to save peer: ${e}`);
-    } finally {
-      setLoading(false);
     }
   }
 
   async function handleGenerateKeypair() {
     try {
-      const [privateKey, publicKey] = await invoke<[string, string]>("generate_wireguard_keypair");
-      return { privateKey, publicKey };
+      const result = await invoke<{ private_key: string; public_key: string }>("generate_keypair");
+      return { privateKey: result.private_key, publicKey: result.public_key };
     } catch (e) {
       setError(`Failed to generate keypair: ${e}`);
       return null;
     }
-  }
-
-  function getPeerStatus(publicKey: string): PeerStatus | undefined {
-    return peerStatuses.find(s => s.public_key === publicKey);
-  }
-
-  function isPeerActive(publicKey: string): boolean {
-    const status = getPeerStatus(publicKey);
-    return status?.latest_handshake !== undefined && status.latest_handshake !== "0";
-  }
-
-  function formatHandshake(timestamp?: string): string {
-    if (!timestamp || timestamp === "0") return "Never";
-
-    // timestamp is Unix time in seconds, calculate seconds ago
-    const unixTime = parseInt(timestamp);
-    const now = Math.floor(Date.now() / 1000);
-    const secondsAgo = now - unixTime;
-
-    if (secondsAgo < 0) return "Just now";
-    if (secondsAgo < 60) return `${secondsAgo} seconds ago`;
-    if (secondsAgo < 3600) {
-      const minutes = Math.floor(secondsAgo / 60);
-      const seconds = secondsAgo % 60;
-      return `${minutes} minute${minutes !== 1 ? 's' : ''}${seconds > 0 ? `, ${seconds} second${seconds !== 1 ? 's' : ''}` : ''} ago`;
-    }
-    if (secondsAgo < 86400) {
-      const hours = Math.floor(secondsAgo / 3600);
-      return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
-    }
-    const days = Math.floor(secondsAgo / 86400);
-    return `${days} day${days !== 1 ? 's' : ''} ago`;
-  }
-
-  function formatBytes(bytes?: string): string {
-    if (!bytes) return "0 B";
-    const b = parseInt(bytes);
-    if (b < 1024) return `${b} B`;
-    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
-    if (b < 1024 * 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
-    return `${(b / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   }
 
   if (loading && !config) {
@@ -277,238 +197,52 @@ function App() {
       <div className="container">
         <div className="empty">
           <h2>No WireGuard configurations found</h2>
-          <p>Create a config file in your WireGuard directory first.</p>
+          <p>
+            Please create a WireGuard configuration file in <code>/opt/homebrew/etc/wireguard/</code> or <code>/usr/local/etc/wireguard/</code>
+          </p>
         </div>
       </div>
     );
   }
 
   const selectedPeerData = config?.peers.find(p => p.public_key === selectedPeer);
-  const selectedPeerStatus = selectedPeer ? getPeerStatus(selectedPeer) : undefined;
+  const selectedPeerStatus = selectedPeer ? getPeerStatus(selectedPeer, peerStatuses) : undefined;
 
   return (
     <div className="app-layout">
-      {/* Sidebar */}
-      <aside className="sidebar">
-        {config && (
-          <>
-            {/* Interface Selector */}
-            {configs.length > 1 ? (
-              <div className="interface-selector">
-                <span className={isUp ? "status-dot active" : "status-dot"}></span>
-                <select
-                  className="interface-select"
-                  value={activeConfig}
-                  onChange={(e) => setActiveConfig(e.target.value)}
-                >
-                  {configs.map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-                {isUp ? (
-                  <button onClick={handleBringDown} className="btn-text btn-danger">
-                    Stop
-                  </button>
-                ) : (
-                  <button onClick={handleRestart} className="btn-text btn-primary">
-                    Start
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="interface-header">
-                <span className={isUp ? "status-dot active" : "status-dot"}></span>
-                <span className="interface-title">{config.name}</span>
-                {isUp ? (
-                  <button onClick={handleBringDown} className="btn-text btn-danger">
-                    Stop
-                  </button>
-                ) : (
-                  <button onClick={handleRestart} className="btn-text btn-primary">
-                    Start
-                  </button>
-                )}
-              </div>
-            )}
+      <Sidebar
+        configs={configs}
+        activeConfig={activeConfig}
+        config={config}
+        isUp={isUp}
+        selectedPeer={selectedPeer}
+        onConfigChange={setActiveConfig}
+        onStart={handleRestart}
+        onStop={handleBringDown}
+        onPeerSelect={setSelectedPeer}
+        onAddPeer={() => setShowAddPeer(true)}
+        isPeerActive={(publicKey) => isPeerActive(publicKey, peerStatuses)}
+      />
 
-            <div className="sidebar-divider"></div>
-
-            {/* Interface Info */}
-            <div className="interface-info-compact">
-              <div className="info-item-compact">
-                <span className="info-label-compact">Address</span>
-                <span className="info-value-compact">{config.interface.address}</span>
-              </div>
-              <div className="info-item-compact">
-                <span className="info-label-compact">Port</span>
-                <span className="info-value-compact">{config.interface.listen_port}</span>
-              </div>
-              <div className="info-item-compact">
-                <span className="info-label-compact">Public Key</span>
-                <code className="info-value-compact">{config.interface.private_key.substring(0, 16)}...</code>
-              </div>
-            </div>
-
-            {/* Peers Header */}
-            <div className="peers-compact-header">
-              <span>Peers ({config.peers.length})</span>
-              <button
-                onClick={() => setShowAddPeer(true)}
-                className="btn-add"
-                title="Add Peer"
-              >
-                +
-              </button>
-            </div>
-
-            <div className="sidebar-divider"></div>
-
-            {/* Peers List */}
-            <div className="peers-compact-list">
-              {config.peers.length === 0 ? (
-                <div className="empty-peers">No peers configured</div>
-              ) : (
-                config.peers.map(peer => {
-                  const isActive = isPeerActive(peer.public_key);
-                  const isSelected = selectedPeer === peer.public_key;
-
-                  return (
-                    <div
-                      key={peer.public_key}
-                      className={`peer-compact-item ${isSelected ? "selected" : ""}`}
-                      onClick={() => setSelectedPeer(peer.public_key)}
-                    >
-                      <span className={`status-dot ${isActive ? "active" : ""}`}></span>
-                      <div className="peer-compact-info">
-                        <span className="peer-compact-name">{peer.name || "Unnamed Peer"}</span>
-                        <span className="peer-compact-ip">{peer.allowed_ips}</span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </>
-        )}
-      </aside>
-
-      {/* Main Content */}
       <main className="main-content">
-        {/* Theme Toggle */}
-        <div className="theme-toggle">
-          <button
-            className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-            onClick={() => setTheme('light')}
-            title="Light Mode"
-          >
-            ☀️
-          </button>
-          <button
-            className={`theme-btn ${theme === 'system' ? 'active' : ''}`}
-            onClick={() => setTheme('system')}
-            title="System"
-          >
-            💻
-          </button>
-          <button
-            className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-            onClick={() => setTheme('dark')}
-            title="Dark Mode"
-          >
-            🌙
-          </button>
-        </div>
+        <ThemeToggle theme={theme} onChange={setTheme} />
 
-        {error && <div className="error">{error}</div>}
+        {error && <ErrorBanner message={error} />}
 
         {!selectedPeerData ? (
-          <div className="empty-state">
-            <h2>Select a peer to view details</h2>
-            <p>Choose a peer from the sidebar to see its configuration and status</p>
-          </div>
+          <EmptyState
+            title="Select a peer to view details"
+            description="Choose a peer from the sidebar to see its configuration and status"
+          />
         ) : (
-          <div className="peer-details">
-            <div className="details-header">
-              <div>
-                <h2>{selectedPeerData.name || "Unnamed Peer"}</h2>
-                <span className={isPeerActive(selectedPeerData.public_key) ? "status-badge active" : "status-badge"}>
-                  {isPeerActive(selectedPeerData.public_key) ? "Active" : "Inactive"}
-                </span>
-              </div>
-              <div className="details-actions">
-                <button onClick={() => setEditingPeer(selectedPeerData)}>
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeletePeer(selectedPeerData.public_key)}
-                  className="btn-danger"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-
-            <div className="details-grid">
-              <div className="detail-section">
-                <h3>Configuration</h3>
-                <div className="detail-row">
-                  <span className="detail-label">Public Key</span>
-                  <code className="detail-value">{selectedPeerData.public_key}</code>
-                </div>
-                <div className="detail-row">
-                  <span className="detail-label">Allowed IPs</span>
-                  <span className="detail-value">{selectedPeerData.allowed_ips}</span>
-                </div>
-                {selectedPeerData.endpoint && (
-                  <div className="detail-row">
-                    <span className="detail-label">Endpoint</span>
-                    <span className="detail-value">{selectedPeerData.endpoint}</span>
-                  </div>
-                )}
-                {selectedPeerData.persistent_keepalive && (
-                  <div className="detail-row">
-                    <span className="detail-label">Keepalive</span>
-                    <span className="detail-value">{selectedPeerData.persistent_keepalive}s</span>
-                  </div>
-                )}
-              </div>
-
-              {selectedPeerStatus && (
-                <div className="detail-section">
-                  <h3>Connection Status</h3>
-                  <div className="detail-row">
-                    <span className="detail-label">Last Handshake</span>
-                    <span className="detail-value">{formatHandshake(selectedPeerStatus.latest_handshake)}</span>
-                  </div>
-                  {selectedPeerStatus.endpoint && (
-                    <div className="detail-row">
-                      <span className="detail-label">Connected Endpoint</span>
-                      <span className="detail-value">{selectedPeerStatus.endpoint}</span>
-                    </div>
-                  )}
-                  <div className="detail-row">
-                    <span className="detail-label">Transfer (RX)</span>
-                    <span className="detail-value transfer-rx">
-                      ↓ {formatBytes(selectedPeerStatus.transfer_rx)}
-                    </span>
-                  </div>
-                  <div className="detail-row">
-                    <span className="detail-label">Transfer (TX)</span>
-                    <span className="detail-value transfer-tx">
-                      ↑ {formatBytes(selectedPeerStatus.transfer_tx)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {!selectedPeerStatus && isUp && (
-                <div className="detail-section">
-                  <h3>Connection Status</h3>
-                  <p className="no-status">No active connection data available</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <PeerDetails
+            peer={selectedPeerData}
+            status={selectedPeerStatus}
+            isUp={isUp}
+            isActive={isPeerActive(selectedPeerData.public_key, peerStatuses)}
+            onEdit={() => setEditingPeer(selectedPeerData)}
+            onDelete={() => handleDeletePeer(selectedPeerData.public_key)}
+          />
         )}
       </main>
 

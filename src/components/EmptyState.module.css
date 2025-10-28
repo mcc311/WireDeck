@@ -1,0 +1,32 @@
+.emptyState {
+  text-align: center;
+  padding: 80px 20px;
+  color: #6b7280;
+}
+
+.emptyState h2 {
+  margin: 0 0 8px 0;
+  color: #374151;
+}
+
+.emptyState p {
+  margin: 0;
+}
+
+:global(.dark-mode) .emptyState {
+  color: #9ca3af;
+}
+
+:global(.dark-mode) .emptyState h2 {
+  color: #e5e7eb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not(.light-mode)) .emptyState {
+    color: #9ca3af;
+  }
+
+  :global(:root:not(.light-mode)) .emptyState h2 {
+    color: #e5e7eb;
+  }
+}

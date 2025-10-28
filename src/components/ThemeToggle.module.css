@@ -1,0 +1,62 @@
+.themeToggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 4px;
+  background: white;
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.themeBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.2em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.themeBtn:hover {
+  background: #f3f4f6;
+}
+
+.themeBtn.active {
+  background: #3b82f6;
+}
+
+:global(.dark-mode) .themeToggle {
+  background: #1f1f1f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+:global(.dark-mode) .themeBtn:hover {
+  background: #2a2a2a;
+}
+
+:global(.dark-mode) .themeBtn.active {
+  background: #3b82f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not(.light-mode)) .themeToggle {
+    background: #1f1f1f;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  :global(:root:not(.light-mode)) .themeBtn:hover {
+    background: #2a2a2a;
+  }
+
+  :global(:root:not(.light-mode)) .themeBtn.active {
+    background: #3b82f6;
+  }
+}

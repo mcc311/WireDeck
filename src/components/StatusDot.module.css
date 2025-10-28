@@ -1,0 +1,33 @@
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d5db;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.statusDot.active {
+  background: #16a34a;
+  box-shadow: 0 0 8px rgba(22, 163, 74, 0.6);
+  animation: pulse-green 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+:global(.dark-mode) .statusDot:not(.active) {
+  background: #4a4a4a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not(.light-mode)) .statusDot:not(.active) {
+    background: #4a4a4a;
+  }
+}

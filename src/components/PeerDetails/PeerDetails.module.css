@@ -1,0 +1,256 @@
+.peerDetails {
+  max-width: 900px;
+}
+
+.detailsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.detailsHeader h2 {
+  margin: 0 0 8px 0;
+  font-size: 1.5em;
+  color: #111827;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.statusBadge.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.detailsActions {
+  display: flex;
+  gap: 8px;
+}
+
+.detailsActions button {
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  font-size: 0.95em;
+  font-family: inherit;
+  color: #0f0f0f;
+  background: white;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.detailsActions button:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.detailsActions button:active {
+  background: #f3f4f6;
+}
+
+.btnDanger {
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+}
+
+.btnDanger:hover {
+  background: #fee2e2 !important;
+  border-color: #f87171 !important;
+}
+
+.detailsGrid {
+  display: grid;
+  gap: 20px;
+}
+
+.detailSection {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.detailSection h3 {
+  margin: 0 0 16px 0;
+  font-size: 1.1em;
+  color: #374151;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 16px;
+}
+
+.detailRow:last-child {
+  border-bottom: none;
+}
+
+.detailLabel {
+  font-weight: 600;
+  color: #6b7280;
+  font-size: 0.9em;
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
+.detailValue {
+  text-align: right;
+  color: #111827;
+  word-break: break-all;
+}
+
+.detailValue code {
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 0.85em;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.transferRx,
+.transferTx {
+  font-weight: 600;
+}
+
+.transferRx {
+  color: #059669;
+}
+
+.transferTx {
+  color: #dc2626;
+}
+
+.noStatus {
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Dark mode */
+:global(.dark-mode) .detailsHeader,
+:global(.dark-mode) .detailSection {
+  background: #1f1f1f;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+:global(.dark-mode) .detailsHeader h2 {
+  color: #f6f6f6;
+}
+
+:global(.dark-mode) .statusBadge {
+  background: #2a2a2a;
+  color: #9ca3af;
+}
+
+:global(.dark-mode) .statusBadge.active {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+:global(.dark-mode) .detailsActions button {
+  background: #1f1f1f;
+  border-color: #404040;
+  color: #e5e7eb;
+}
+
+:global(.dark-mode) .detailsActions button:hover {
+  background: #2a2a2a;
+  border-color: #525252;
+}
+
+:global(.dark-mode) .detailSection h3 {
+  color: #e5e7eb;
+  border-bottom-color: #2a2a2a;
+}
+
+:global(.dark-mode) .detailRow {
+  border-bottom-color: #2a2a2a;
+}
+
+:global(.dark-mode) .detailLabel {
+  color: #9ca3af;
+}
+
+:global(.dark-mode) .detailValue {
+  color: #e5e7eb;
+}
+
+:global(.dark-mode) .detailValue code {
+  background: #2a2a2a;
+  color: #9ca3af;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not(.light-mode)) .detailsHeader,
+  :global(:root:not(.light-mode)) .detailSection {
+    background: #1f1f1f;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  :global(:root:not(.light-mode)) .detailsHeader h2 {
+    color: #f6f6f6;
+  }
+
+  :global(:root:not(.light-mode)) .statusBadge {
+    background: #2a2a2a;
+    color: #9ca3af;
+  }
+
+  :global(:root:not(.light-mode)) .statusBadge.active {
+    background: #064e3b;
+    color: #6ee7b7;
+  }
+
+  :global(:root:not(.light-mode)) .detailsActions button {
+    background: #1f1f1f;
+    border-color: #404040;
+    color: #e5e7eb;
+  }
+
+  :global(:root:not(.light-mode)) .detailsActions button:hover {
+    background: #2a2a2a;
+    border-color: #525252;
+  }
+
+  :global(:root:not(.light-mode)) .detailSection h3 {
+    color: #e5e7eb;
+    border-bottom-color: #2a2a2a;
+  }
+
+  :global(:root:not(.light-mode)) .detailRow {
+    border-bottom-color: #2a2a2a;
+  }
+
+  :global(:root:not(.light-mode)) .detailLabel {
+    color: #9ca3af;
+  }
+
+  :global(:root:not(.light-mode)) .detailValue {
+    color: #e5e7eb;
+  }
+
+  :global(:root:not(.light-mode)) .detailValue code {
+    background: #2a2a2a;
+    color: #9ca3af;
+  }
+}

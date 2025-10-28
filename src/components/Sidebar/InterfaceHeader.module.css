@@ -1,0 +1,80 @@
+.interfaceSelector,
+.interfaceHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.interfaceSelect {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  outline: none;
+}
+
+.interfaceTitle {
+  flex: 1;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #111827;
+}
+
+.btnText {
+  padding: 4px 12px;
+  font-size: 0.9em;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.btnText.btnPrimary {
+  color: #3b82f6;
+}
+
+.btnText.btnPrimary:hover {
+  background: #eff6ff;
+}
+
+.btnText.btnDanger {
+  color: #ef4444;
+}
+
+.btnText.btnDanger:hover {
+  background: #fef2f2;
+}
+
+/* Dark mode */
+:global(.dark-mode) .interfaceSelector,
+:global(.dark-mode) .interfaceHeader {
+  background: #1f1f1f;
+  border-bottom-color: #2a2a2a;
+}
+
+:global(.dark-mode) .interfaceSelect,
+:global(.dark-mode) .interfaceTitle {
+  color: #f6f6f6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not(.light-mode)) .interfaceSelector,
+  :global(:root:not(.light-mode)) .interfaceHeader {
+    background: #1f1f1f;
+    border-bottom-color: #2a2a2a;
+  }
+
+  :global(:root:not(.light-mode)) .interfaceSelect,
+  :global(:root:not(.light-mode)) .interfaceTitle {
+    color: #f6f6f6;
+  }
+}

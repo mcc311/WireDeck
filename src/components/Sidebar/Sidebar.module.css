@@ -1,0 +1,93 @@
+.sidebar {
+  width: 280px;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0;
+}
+
+.interfaceInfo {
+  padding: 12px 20px;
+}
+
+.infoItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.infoLabel {
+  font-size: 0.85em;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.infoValue {
+  font-size: 0.9em;
+  color: #111827;
+  font-weight: 500;
+}
+
+.infoValue code {
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #4b5563;
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* Dark mode */
+:global(.dark-mode) .sidebar {
+  background: #1f1f1f;
+  border-right-color: #2a2a2a;
+}
+
+:global(.dark-mode) .divider {
+  background: #2a2a2a;
+}
+
+:global(.dark-mode) .infoLabel {
+  color: #9ca3af;
+}
+
+:global(.dark-mode) .infoValue {
+  color: #e5e7eb;
+}
+
+:global(.dark-mode) .infoValue code {
+  color: #9ca3af;
+  background: #2a2a2a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not(.light-mode)) .sidebar {
+    background: #1f1f1f;
+    border-right-color: #2a2a2a;
+  }
+
+  :global(:root:not(.light-mode)) .divider {
+    background: #2a2a2a;
+  }
+
+  :global(:root:not(.light-mode)) .infoLabel {
+    color: #9ca3af;
+  }
+
+  :global(:root:not(.light-mode)) .infoValue {
+    color: #e5e7eb;
+  }
+
+  :global(:root:not(.light-mode)) .infoValue code {
+    color: #9ca3af;
+    background: #2a2a2a;
+  }
+}
