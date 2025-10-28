@@ -1,4 +1,3 @@
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -106,7 +105,25 @@ pub fn parse_config(name: &str) -> Result<WgConfig, WgError> {
         return Err(WgError::NotFound(name.to_string()));
     }
 
-    let content = fs::read_to_string(&path)?;
+    // Try to read directly first
+    let content = match fs::read_to_string(&path) {
+        Ok(content) => content,
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            // If permission denied, try with sudo
+            let output = Command::new("sudo")
+                .arg("cat")
+                .arg(&path)
+                .output()?;
+
+            if !output.status.success() {
+                return Err(WgError::Io(e));
+            }
+
+            String::from_utf8_lossy(&output.stdout).to_string()
+        }
+        Err(e) => return Err(WgError::Io(e)),
+    };
+
     parse_config_content(name, &path, &content)
 }
 
@@ -265,15 +282,56 @@ pub fn serialize_config(config: &WgConfig) -> String {
 pub fn save_config(config: &WgConfig) -> Result<(), WgError> {
     let content = serialize_config(config);
 
-    // Create backup
+    // Create backup using sudo if needed
     if config.path.exists() {
         let backup_path = config.path.with_extension("conf.bak");
-        fs::copy(&config.path, backup_path)?;
+
+        // Try direct copy first, fall back to sudo if permission denied
+        if let Err(e) = fs::copy(&config.path, &backup_path) {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                Command::new("sudo")
+                    .arg("cp")
+                    .arg(&config.path)
+                    .arg(&backup_path)
+                    .status()?;
+            } else {
+                return Err(WgError::Io(e));
+            }
+        }
     }
 
-    // Write new config
-    fs::write(&config.path, content)?;
-    Ok(())
+    // Write new config using sudo if needed
+    match fs::write(&config.path, &content) {
+        Ok(_) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            // Write to temp file first
+            let temp_path = std::env::temp_dir().join(format!("wiredeck_{}.conf", config.name));
+            fs::write(&temp_path, content)?;
+
+            // Move with sudo
+            let output = Command::new("sudo")
+                .arg("mv")
+                .arg(&temp_path)
+                .arg(&config.path)
+                .output()?;
+
+            if !output.status.success() {
+                return Err(WgError::CommandFailed(
+                    String::from_utf8_lossy(&output.stderr).to_string()
+                ));
+            }
+
+            // Restore proper permissions
+            Command::new("sudo")
+                .arg("chmod")
+                .arg("600")
+                .arg(&config.path)
+                .status()?;
+
+            Ok(())
+        }
+        Err(e) => Err(WgError::Io(e)),
+    }
 }
 
 /// Get status of all peers in a config
