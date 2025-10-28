@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* Global Reset */
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  width: 100%;
+}
+
+/* Light mode (default) */
+:root {
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+}
+
+/* Light mode explicit */
+.light-mode {
+  color: #0f0f0f;
+  background-color: #f6f6f6;
+}
+
+/* Dark mode class-based */
+.dark-mode {
+  color: #f6f6f6;
+  background-color: #1a1a1a;
+}
+
+/* Dark mode system preference */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light-mode) {
+    color: #f6f6f6;
+    background-color: #1a1a1a;
+  }
+}
