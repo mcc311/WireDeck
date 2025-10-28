@@ -336,9 +336,12 @@ pub fn save_config(config: &WgConfig) -> Result<(), WgError> {
 
 /// Get status of all peers in a config
 pub fn get_peer_status(config_name: &str) -> Result<Vec<PeerStatus>, WgError> {
-    let output = Command::new("wg")
+    let interface_name = get_real_interface_name(config_name)?;
+
+    let output = Command::new("sudo")
+        .arg("wg")
         .arg("show")
-        .arg(config_name)
+        .arg(&interface_name)
         .arg("dump")
         .output()?;
 
@@ -371,11 +374,51 @@ pub fn get_peer_status(config_name: &str) -> Result<Vec<PeerStatus>, WgError> {
     Ok(statuses)
 }
 
+/// Get the real interface name (handles macOS utun mapping)
+/// On macOS, wg-quick creates utunX interfaces and stores the mapping in /var/run/wireguard/{config}.name
+fn get_real_interface_name(config_name: &str) -> Result<String, WgError> {
+    let name_file = PathBuf::from(format!("/var/run/wireguard/{}.name", config_name));
+
+    if name_file.exists() {
+        // Try to read directly first
+        match fs::read_to_string(&name_file) {
+            Ok(content) => Ok(content.trim().to_string()),
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                // Need sudo to read
+                let output = Command::new("sudo")
+                    .arg("cat")
+                    .arg(&name_file)
+                    .output()?;
+
+                if output.status.success() {
+                    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+                } else {
+                    // Fallback to config name
+                    Ok(config_name.to_string())
+                }
+            }
+            Err(_) => Ok(config_name.to_string()),
+        }
+    } else {
+        // Not running or on Linux - use config name directly
+        Ok(config_name.to_string())
+    }
+}
+
 /// Check if WireGuard interface is running
 pub fn is_interface_up(config_name: &str) -> Result<bool, WgError> {
-    let output = Command::new("wg")
+    // Check if the name file exists - reliable indicator on macOS
+    let name_file = PathBuf::from(format!("/var/run/wireguard/{}.name", config_name));
+    if !name_file.exists() {
+        return Ok(false);
+    }
+
+    let interface_name = get_real_interface_name(config_name)?;
+
+    let output = Command::new("sudo")
+        .arg("wg")
         .arg("show")
-        .arg(config_name)
+        .arg(&interface_name)
         .output()?;
 
     Ok(output.status.success())
